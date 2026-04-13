@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('files:', list\\(d.get\\('files',{}\\).keys\\(\\)\\)\\); print\\('owner:', d.get\\('owner',{}\\).get\\('login','?'\\)\\); print\\('public:', d.get\\('public'\\)\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(ls -d \"D:/Descargas/deploy-69dabd1ac6dbb42f19f9222d\"/*/)",
+      "Bash(wc -l ls -d \"D:/Descargas/deploy-69dabd1ac6dbb42f19f9222d\"/*/)",
+      "Bash(python:*)",
+      "Bash(netlify unlink:*)",
+      "Bash(node:*)"
+    ]
+  }
+}
