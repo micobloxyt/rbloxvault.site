@@ -1,0 +1,1 @@
+Este archivo confirma que Antigravity está trabajando en la carpeta correcta y que el link a GitHub está activo.
