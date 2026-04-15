@@ -47,24 +47,92 @@
   <meta name="google-adsense-account" content="ca-pub-3048023598545728">
   <script>
     (function() {
-      if (window.navigator.webdriver || /bot|crawler|spider|headless/i.test(window.navigator.userAgent)) {
-         return; 
+      // --- 1. User-Agent básico ---
+      var ua = window.navigator.userAgent;
+      if (/bot|crawler|spider|headless|slurp|baiduspider|yandex|semrush|ahrefsbot|mj12bot|dotbot|petalbot|bytespider/i.test(ua)) return;
+
+      // --- 2. Webdriver / automatización ---
+      if (
+        window.navigator.webdriver ||
+        window.document.__selenium_unwrapped ||
+        window.document.__webdriver_evaluate ||
+        window.document.__driver_evaluate ||
+        window._phantom ||
+        window.__nightmare ||
+        window.callPhantom ||
+        window.Buffer ||
+        window.emit ||
+        window.spawn
+      ) return;
+
+      // --- 3. Fingerprinting del navegador ---
+      function isSuspicious() {
+        // Plugins vacíos (bots no tienen plugins)
+        if (navigator.plugins && navigator.plugins.length === 0 && !/mobile/i.test(ua)) return true;
+
+        // languages vacío
+        if (!navigator.languages || navigator.languages.length === 0) return true;
+
+        // Pantalla inconsistente
+        if (screen.width === 0 || screen.height === 0) return true;
+
+        // Chromium headless tiene estos valores exactos
+        if (screen.width === 800 && screen.height === 600) return true;
+
+        // Función nativa alterada (Playwright / Puppeteer parchean estos)
+        try {
+          var nativeToString = Function.prototype.toString;
+          if (nativeToString.call(window.navigator.permissions.query).indexOf('native code') === -1) return true;
+        } catch(e) {}
+
+        // Chrome sin propiedades de Chrome
+        if (/Chrome/.test(ua) && typeof window.chrome === 'undefined') return true;
+
+        // Devtools abiertos (técnica de tamaño)
+        if (window.outerWidth === 0 && window.outerHeight === 0) return true;
+
+        return false;
       }
-      let adsLoaded = false;
-      const loadAds = function() {
+
+      if (isSuspicious()) return;
+
+      // --- 4. Click fraud: require movimiento de mouse antes de contar click en ads ---
+      var humanSignals = 0;
+      var lastMouseX = -1, lastMouseY = -1;
+
+      document.addEventListener('mousemove', function(e) {
+        // Movimiento mínimo real (bots generan eventos sin cambio de posición)
+        if (Math.abs(e.clientX - lastMouseX) > 5 || Math.abs(e.clientY - lastMouseY) > 5) {
+          humanSignals++;
+          lastMouseX = e.clientX;
+          lastMouseY = e.clientY;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function() { humanSignals++; }, { passive: true });
+      document.addEventListener('keydown', function() { humanSignals++; }, { passive: true });
+
+      // --- 5. Cargar AdSense solo con señales humanas reales ---
+      var adsLoaded = false;
+      function loadAds() {
         if (adsLoaded) return;
+        // Al menos 2 señales humanas reales antes de cargar ads
+        if (humanSignals < 2 && this !== 'timeout') return;
         adsLoaded = true;
-        const script = document.createElement('script');
+        var script = document.createElement('script');
         script.async = true;
         script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3048023598545728";
         script.crossOrigin = "anonymous";
         document.head.appendChild(script);
-      };
-      window.addEventListener('scroll', loadAds, { once: true, passive: true });
-      window.addEventListener('mousemove', loadAds, { once: true, passive: true });
-      window.addEventListener('touchstart', loadAds, { once: true, passive: true });
-      window.addEventListener('keydown', loadAds, { once: true, passive: true });
-      setTimeout(loadAds, 6000);
+      }
+
+      document.addEventListener('scroll', function() { humanSignals++; loadAds(); }, { once: true, passive: true });
+      document.addEventListener('mousemove', function() { loadAds(); }, { once: true, passive: true });
+      document.addEventListener('touchstart', function() { humanSignals++; loadAds(); }, { once: true, passive: true });
+      document.addEventListener('keydown', function() { loadAds(); }, { once: true, passive: true });
+
+      // Fallback: si hay señales pero no se cargó aún, cargar a los 8s
+      setTimeout(function() { loadAds.call('timeout'); }, 8000);
     })();
   </script>
   <meta charset="utf-8">
